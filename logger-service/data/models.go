@@ -13,11 +13,11 @@ import (
 
 var client *mongo.Client
 
-func new(mongo *mongo.Client) Models {
+func New(mongo *mongo.Client) Models {
 	client = mongo
 
 	return Models{
-		logEntry: LogEntry{},
+		LogEntry: LogEntry{},
 	}
 }
 
@@ -29,7 +29,7 @@ type LogEntry struct {
 	ID        string    `bson:"_id,omitempty" json:"id,omitempty"`
 	Name      string    `bson:"name" json:"name"`
 	Data      string    `bson:"data" json:"data"`
-	CreateAt  time.Time `bson:"created_at" json:"created_at"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
 }
 
@@ -39,14 +39,14 @@ func (l *LogEntry) Insert(entry LogEntry) error {
 	_, err := collection.InsertOne(context.TODO(), LogEntry{
 		Name:      entry.Name,
 		Data:      entry.Data,
-		CreateAt:  time.Now(),
+		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	})
-
 	if err != nil {
 		log.Println("Error inserting into logs:", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -61,34 +61,39 @@ func (l *LogEntry) All() ([]*LogEntry, error) {
 
 	cursor, err := collection.Find(context.TODO(), bson.D{}, opts)
 	if err != nil {
-		log.Println("finding all docs error:", err)
+		log.Println("Finding all docs error:", err)
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
 	var logs []*LogEntry
+
 	for cursor.Next(ctx) {
 		var item LogEntry
 
 		err := cursor.Decode(&item)
 		if err != nil {
-			log.Println("error deconding log into slice:", err)
+			log.Print("Error decoding log into slice:", err)
 			return nil, err
 		} else {
 			logs = append(logs, &item)
 		}
 	}
+
 	return logs, nil
 }
+
 func (l *LogEntry) GetOne(id string) (*LogEntry, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	collection := client.Database("logs").Collection("logs")
+
 	docID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
 	}
+
 	var entry LogEntry
 	err = collection.FindOne(ctx, bson.M{"_id": docID}).Decode(&entry)
 	if err != nil {
@@ -101,6 +106,7 @@ func (l *LogEntry) GetOne(id string) (*LogEntry, error) {
 func (l *LogEntry) DropCollection() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
 	collection := client.Database("logs").Collection("logs")
 
 	if err := collection.Drop(ctx); err != nil {
@@ -113,6 +119,7 @@ func (l *LogEntry) DropCollection() error {
 func (l *LogEntry) Update() (*mongo.UpdateResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
 	collection := client.Database("logs").Collection("logs")
 
 	docID, err := primitive.ObjectIDFromHex(l.ID)
@@ -135,5 +142,6 @@ func (l *LogEntry) Update() (*mongo.UpdateResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return result, nil
 }
