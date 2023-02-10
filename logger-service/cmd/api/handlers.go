@@ -1,6 +1,9 @@
 package main
 
-import "net/http"
+import (
+	"log-service/data"
+	"net/http"
+)
 
 type JSONPayload struct {
 	Name string `json:"name"`
@@ -9,28 +12,25 @@ type JSONPayload struct {
 
 func (app *Config) WriteLog(w http.ResponseWriter, r *http.Request) {
 	// read json into var
-
 	var requestPayload JSONPayload
 	_ = app.readJSON(w, r, &requestPayload)
 
-	//insert data 
+	// insert data
 	event := data.LogEntry{
 		Name: requestPayload.Name,
-		data: requestPayload.Data,
+		Data: requestPayload.Data,
 	}
 
 	err := app.Models.LogEntry.Insert(event)
 	if err != nil {
 		app.errorJSON(w, err)
 		return
-
-
 	}
-	resp := jsonResponse {
-		Error:false,
+
+	resp := jsonResponse{
+		Error:   false,
 		Message: "logged",
 	}
 
 	app.writeJSON(w, http.StatusAccepted, resp)
 }
-
